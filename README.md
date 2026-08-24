@@ -40,4 +40,11 @@ The action space of the LunarLander-v2 environment is discrete and consists of 4
 - Small positive/negative rewards are given for keeping the lander upright and minimizing velocity.
 
 # Solution Description
-
+This project will require the following dependencies and should be run in python 3.11.
+'''bash
+pip install gymnasium
+pip install torch
+pip install tqdm
+pip install numpy
+pip install matplotlib
+'''
