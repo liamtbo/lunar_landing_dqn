@@ -41,10 +41,10 @@ The action space of the LunarLander-v2 environment is discrete and consists of 4
 
 # Solution Description
 This project will require the following dependencies and should be run in python 3.11.
-'''bash
+```bash
 pip install gymnasium
 pip install torch
 pip install tqdm
 pip install numpy
 pip install matplotlib
-'''
+```
