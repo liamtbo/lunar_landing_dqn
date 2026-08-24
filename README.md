@@ -71,6 +71,7 @@ device = torch.device(
 )
 ```
 For a solution to the lunar-landing problem, I chose to implement a Deep Q-Network (DQN). Deep Q-Networks have become famous for their significant advancements within reinforcement learning and for achieving human-level performance on Atari games.
+
 $$
 Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right]
 $$
