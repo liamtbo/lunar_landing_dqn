@@ -161,12 +161,7 @@ $$
 $$
 
 $$
-\mathbf{w}_t
-=
-\mathbf{w}_{t-1}
--
-\frac{\alpha \hat{\mathbf{m}}_t}
-{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
+\mathbf{w}_t = \mathbf{w}_{t-1} - \frac{\alpha \hat{\mathbf{m}}_t} {\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
 $$
 
 Momentum is a technique to accelerate gradient descent by considering past gradients to smooth out the updates. It helps avoid local minima and can speed up convergence. Adaptive learning rate methods adjust the learning rate dynamically to improve convergence.
