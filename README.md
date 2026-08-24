@@ -182,6 +182,7 @@ L_\delta(y, \hat{y}) =
 \delta \cdot (|y - \hat{y}| - \frac{1}{2} \delta) & \text{otherwise}
 \end{cases}
 $$
+
 where:
 - y is the true value,
 - y^ is the predicted value, and
