@@ -145,6 +145,7 @@ def plot_rewards(show_result=False):
 My optimize_network function performs gradient descent on the loss. In my code, I use the Adam Optimizer due to its adaptive learning rates and momentum estimation.
 
 The Adam optimization equations are:
+
 $$
 \mathbf{m}_t = \beta_m \mathbf{m}_{t-1} + (1 - \beta_m) g_t
 $$
