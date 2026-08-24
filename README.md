@@ -182,3 +182,171 @@ where:
 - y is the true value,
 - y^ is the predicted value, and
 - delta is a threshold parameter that determines the point where the loss function changes from quadratic to linear.
+
+```python
+def optimize_network(functions, hp, replay: ReplayBuffer):
+    if len(replay) < hp["minibatch_size"]:
+        return
+    device = functions["device"]
+    policy_nn = functions["policy_nn"]
+    target_nn = functions["target_nn"]
+    loss_function = functions["loss_function"]
+    optimizer = functions["optimizer"]
+
+    batch = replay.sample(hp["minibatch_size"])
+    batch = Transition(*zip(*batch))
+
+    states = torch.tensor(np.array(batch.state), dtype=torch.float32, device=device)
+    actions = torch.tensor(batch.action, dtype=torch.long, device=device).unsqueeze(1)
+    rewards = torch.tensor(batch.reward, dtype=torch.float32, device=device)
+    next_states = torch.tensor(np.array(batch.next_state), dtype=torch.float32, device=device)
+    terminated = torch.tensor(batch.terminated, dtype=int, device=device)
+
+    predicted  = policy_nn(states).gather(1, actions).squeeze(1)
+    with torch.no_grad():
+        next_states_qvalues = torch.max(target_nn(next_states), dim=1).values * (1 - terminated)
+    target = rewards + 0.99 * next_states_qvalues
+    loss = loss_function(predicted, target)
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_nn.parameters(), 1)
+
+    optimizer.step()
+```
+Below I've written code for two different action selection functions. Decaying Epsilon-Greedy seemed to work better across the board then undecaying softmax which is why we'll use it in the final run.
+```python
+
+def e_greedy(q_values, functions, hp):
+    env = functions["env"]
+    device = functions["device"]
+    eps_threshold = hp["eps_end"] + (hp["eps_start"] - hp["eps_end"]) \
+                    * math.exp(-1. * hp["steps_done"] / hp["eps_decay"])
+    hp["steps_done"] += 1
+    sample = torch.rand(1).item()
+
+    if sample > eps_threshold:
+        with torch.no_grad():
+            return q_values.max(0).indices.item()
+    else:
+        action = torch.randint(0, env.action_space.n, size=(1,)).item()
+        return torch.tensor([action], device=device, dtype=torch.long).item()
+
+def softmax(state_qvalues, functions, hp):
+    state_qvalues_probabilities = torch.softmax(state_qvalues, dim=0)
+    state_qvalues_dis = torch.distributions.Categorical(state_qvalues_probabilities)
+    action = state_qvalues_dis.sample().item()
+    return action
+```
+
+Here is where our policy neural network is tested and trained. After continuously interacting with the environment, the replay buffer will be large enough to start gradient descent. After the policy network is optimized, I perform a soft update on the target network. Soft updating provides stability by preventing the target network from shifting too rapidly and smooths convergence by reducing the risk of overfitting to recent experiences or changes in the policy network.
+
+$$
+\theta_{\text{target}} \leftarrow \tau \theta_{\text{policy}} + (1 - \tau) \theta_{\text{target}}
+$$
+
+```python
+def training_loop(functions, hp):
+    env = functions["env"]
+    policy_nn = functions["policy_nn"]
+    target_nn = functions["target_nn"]
+    device = functions["device"]
+    select_action = functions["select_action"]
+    replay = ReplayBuffer(hp["ReplayBuffer_capacity"])
+    reward_sum = 0
+
+    for episode in range(hp["episodes"]):
+        state, _ = env.reset()
+        state = torch.tensor(state, dtype=torch.float32, device=device)
+        terminated = False
+
+        for t in count():
+            with torch.no_grad():
+                state_qvalues = policy_nn(state)
+            action = select_action(state_qvalues, functions, hp)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            reward_sum += reward
+            replay.push(state.tolist(), action, reward, next_state, terminated)
+            state = torch.tensor(next_state, dtype=torch.float32, device=device)
+
+            for _ in range(hp["replay_steps"]):
+                optimize_network(functions, hp, replay)
+
+            # soft update
+            TAU = 0.005
+            target_net_state_dict = target_nn.state_dict()
+            policy_net_state_dict = policy_nn.state_dict()
+            for key in policy_net_state_dict:
+                target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+            target_nn.load_state_dict(target_net_state_dict)
+        
+            if terminated or truncated:
+                episode_rewards.append(reward_sum) # TODO
+                reward_sum = 0
+                plot_rewards()
+                break
+            
+    print('Complete')
+    plot_rewards(show_result=True)
+    plt.ioff()
+    plt.show()
+```
+Main() is where we finally populate the hyperparameters, choose our functions, and run our code.
+```python
+def main():
+    # env = gym.make('LunarLander-v2', render_mode="human")
+    env = gym.make('LunarLander-v2')
+
+
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+    policy_nn = DQN(state_dim, action_dim).to(device)
+    target_nn = DQN(state_dim, action_dim).to(device)
+    target_nn.load_state_dict(policy_nn.state_dict())
+    lr = 1e-4
+
+    functions = {
+        "env": env,
+        "policy_nn": policy_nn,
+        "target_nn": target_nn,
+        "loss_function": nn.SmoothL1Loss(),
+        "optimizer": optim.Adam(policy_nn.parameters(), lr=lr),
+        "device": device,
+        "select_action": e_greedy # softmax or e_greedy
+    }
+    hp = {
+        "episodes": 500,
+        "graph_increment": 10,
+        "replay_steps": 2,
+        "learning_rate": lr,
+        "tau": 0.001,
+        "ReplayBuffer_capacity": 10000,
+        "minibatch_size": 64,
+        "eps_end": 0.05,
+        "eps_start": 0.9,
+        "eps_decay": 500,
+        "steps_done": 0,
+    }
+
+    training_loop(functions, hp)
+    # torch.save(policy_nn.state_dict(), "learned_policy.pth")
+    env.close()
+    return policy_nn
+
+policy_nn = main()
+```
+After running our network for 1000 episodes, it's converged to a solution and is ready to be tested below.
+```
+env = gym.make('LunarLander-v2', render_mode="human")
+for episode in range(5):
+    state, _ = env.reset()
+    for t in count():
+        state = torch.tensor(state, dtype=torch.float32, device=device)
+        state_qvalues = policy_nn(state)
+        action = state_qvalues.max(0).indices.item()
+        next_state, reward, terminated, truncated, info = env.step(action)
+
+        state = next_state
+
+        if terminated or truncated:
+            break
+```
