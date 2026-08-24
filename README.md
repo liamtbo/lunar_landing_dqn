@@ -146,15 +146,28 @@ My optimize_network function performs gradient descent on the loss. In my code, 
 
 The Adam optimization equations are:
 $$
-\mathbf{m}_t = \beta_m \mathbf{m}_{t-1} + (1 - \beta_m) g_t \\
+\mathbf{m}_t = \beta_m \mathbf{m}_{t-1} + (1 - \beta_m) g_t
+$$
+
+$$
 \mathbf{v}_t = \beta_v \mathbf{v}_{t-1} + (1 - \beta_v) g_t^2
 $$
+
 $$
-\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_m^t} \quad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_v^t}
+\hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_m^t},
+\qquad
+\hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_v^t}
 $$
+
 $$
-\mathbf{w}_t = \mathbf{w}_{t-1} + \frac{\alpha \hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
+\mathbf{w}_t
+=
+\mathbf{w}_{t-1}
+-
+\frac{\alpha \hat{\mathbf{m}}_t}
+{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
 $$
+
 Momentum is a technique to accelerate gradient descent by considering past gradients to smooth out the updates. It helps avoid local minima and can speed up convergence. Adaptive learning rate methods adjust the learning rate dynamically to improve convergence.
 
 To perform the Q-learning update, I use a target network and a policy network to help stabilize training and improve the convergence of the algorithm.
