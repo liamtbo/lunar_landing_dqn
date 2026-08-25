@@ -108,7 +108,7 @@ class ReplayBuffer():
         return len(self.ReplayBuffer)
 ```
 The plot_rewards function will continiously plot our sum reward allowing us to visualize the network improving.
-```
+```python
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython:
@@ -336,7 +336,7 @@ def main():
 policy_nn = main()
 ```
 After running our network for 1000 episodes, it's converged to a solution and is ready to be tested below.
-```
+```python
 env = gym.make('LunarLander-v2', render_mode="human")
 for episode in range(5):
     state, _ = env.reset()
